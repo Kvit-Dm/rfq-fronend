@@ -1,11 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
 
-import { productGroupsFiltersSlice } from "@/lib/store/slices/product-groups-filters-slice";
+import { productsFiltersSlice } from "@/lib/store/slices/products-filters-slice";
 
 export function makeStore() {
   return configureStore({
     reducer: {
-      [productGroupsFiltersSlice.name]: productGroupsFiltersSlice.reducer,
+      [productsFiltersSlice.name]: productsFiltersSlice.reducer,
     },
     devTools: process.env.NODE_ENV !== "production",
   });

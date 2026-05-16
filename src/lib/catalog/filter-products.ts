@@ -1,43 +1,43 @@
-import type { ProductGroupListItem } from "@/types/catalog";
+import type { ProductListItem } from "@/types/catalog";
 
-export type ProductGroupsSort = "featured" | "name-asc" | "name-desc" | "producer-asc";
+export type ProductsSort = "featured" | "name-asc" | "name-desc" | "producer-asc";
 
-export type ProductGroupsFilterInput = {
+export type ProductsFilterInput = {
   search: string;
-  categories: string[];
-  producers: string[];
+  categorySlugs: string[];
+  producerSlugs: string[];
   certifications: string[];
-  sort: ProductGroupsSort;
+  sort: ProductsSort;
 };
 
-function matchesSearch(item: ProductGroupListItem, q: string): boolean {
+function matchesSearch(item: ProductListItem, q: string): boolean {
   if (!q.trim()) return true;
   const s = q.trim().toLowerCase();
   return (
     item.name.toLowerCase().includes(s) ||
     item.shortDescription.toLowerCase().includes(s) ||
     item.producerName.toLowerCase().includes(s) ||
-    item.category.toLowerCase().includes(s)
+    item.categoryName.toLowerCase().includes(s)
   );
 }
 
-function matchesCategories(item: ProductGroupListItem, selected: string[]): boolean {
+function matchesCategories(item: ProductListItem, selected: string[]): boolean {
   if (selected.length === 0) return true;
-  return selected.includes(item.category);
+  return selected.includes(item.categorySlug);
 }
 
-function matchesProducers(item: ProductGroupListItem, selected: string[]): boolean {
+function matchesProducers(item: ProductListItem, selected: string[]): boolean {
   if (selected.length === 0) return true;
   return selected.includes(item.producerSlug);
 }
 
 /** Item must include every selected certification (AND). */
-function matchesCertifications(item: ProductGroupListItem, selected: string[]): boolean {
+function matchesCertifications(item: ProductListItem, selected: string[]): boolean {
   if (selected.length === 0) return true;
   return selected.every((c) => item.certifications.includes(c));
 }
 
-function sortItems(items: ProductGroupListItem[], sort: ProductGroupsSort): ProductGroupListItem[] {
+function sortItems(items: ProductListItem[], sort: ProductsSort): ProductListItem[] {
   const copy = [...items];
   switch (sort) {
     case "name-asc":
@@ -52,15 +52,12 @@ function sortItems(items: ProductGroupListItem[], sort: ProductGroupsSort): Prod
   }
 }
 
-export function filterProductGroups(
-  items: ProductGroupListItem[],
-  filters: ProductGroupsFilterInput,
-): ProductGroupListItem[] {
+export function filterProducts(items: ProductListItem[], filters: ProductsFilterInput): ProductListItem[] {
   const narrowed = items.filter(
     (it) =>
       matchesSearch(it, filters.search) &&
-      matchesCategories(it, filters.categories) &&
-      matchesProducers(it, filters.producers) &&
+      matchesCategories(it, filters.categorySlugs) &&
+      matchesProducers(it, filters.producerSlugs) &&
       matchesCertifications(it, filters.certifications),
   );
   return sortItems(narrowed, filters.sort);

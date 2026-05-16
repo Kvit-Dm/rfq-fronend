@@ -1,25 +1,25 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-import type { ProductGroupsSort } from "@/lib/catalog/filter-product-groups";
+import type { ProductsSort } from "@/lib/catalog/filter-products";
 
-export type ProductGroupsFiltersState = {
+export type ProductsFiltersState = {
   search: string;
-  categories: string[];
-  producers: string[];
+  categorySlugs: string[];
+  producerSlugs: string[];
   certifications: string[];
-  sort: ProductGroupsSort;
+  sort: ProductsSort;
 };
 
-const initialState: ProductGroupsFiltersState = {
+const initialState: ProductsFiltersState = {
   search: "",
-  categories: [],
-  producers: [],
+  categorySlugs: [],
+  producerSlugs: [],
   certifications: [],
   sort: "featured",
 };
 
-export const productGroupsFiltersSlice = createSlice({
-  name: "productGroupsFilters",
+export const productsFiltersSlice = createSlice({
+  name: "productsFilters",
   initialState,
   reducers: {
     setSearch(state, action: PayloadAction<string>) {
@@ -27,15 +27,15 @@ export const productGroupsFiltersSlice = createSlice({
     },
     toggleCategory(state, action: PayloadAction<string>) {
       const v = action.payload;
-      state.categories = state.categories.includes(v)
-        ? state.categories.filter((x) => x !== v)
-        : [...state.categories, v];
+      state.categorySlugs = state.categorySlugs.includes(v)
+        ? state.categorySlugs.filter((x) => x !== v)
+        : [...state.categorySlugs, v];
     },
     toggleProducer(state, action: PayloadAction<string>) {
       const v = action.payload;
-      state.producers = state.producers.includes(v)
-        ? state.producers.filter((x) => x !== v)
-        : [...state.producers, v];
+      state.producerSlugs = state.producerSlugs.includes(v)
+        ? state.producerSlugs.filter((x) => x !== v)
+        : [...state.producerSlugs, v];
     },
     toggleCertification(state, action: PayloadAction<string>) {
       const v = action.payload;
@@ -43,7 +43,7 @@ export const productGroupsFiltersSlice = createSlice({
         ? state.certifications.filter((x) => x !== v)
         : [...state.certifications, v];
     },
-    setSort(state, action: PayloadAction<ProductGroupsSort>) {
+    setSort(state, action: PayloadAction<ProductsSort>) {
       state.sort = action.payload;
     },
     resetFilters() {
@@ -59,4 +59,4 @@ export const {
   toggleCertification,
   setSort,
   resetFilters,
-} = productGroupsFiltersSlice.actions;
+} = productsFiltersSlice.actions;

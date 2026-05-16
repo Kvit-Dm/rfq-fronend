@@ -1,8 +1,31 @@
-import type { ProducerProfile, ProductGroupDetail, ProductGroupListItem } from "@/types/catalog";
+import type { Category, ProducerProfile, ProductDetail, ProductListItem } from "@/types/catalog";
 
 /**
  * Stand-in for DB/API. Replace imports with `fetch` / server loaders later.
  */
+export const DUMMY_CATEGORIES: Category[] = [
+  {
+    slug: "oils",
+    name: "Oils",
+    description: "Refined and crude vegetable oils for food manufacturing and retail.",
+  },
+  {
+    slug: "meals",
+    name: "Meals",
+    description: "Protein meals and by-products for feed and nutrition formulations.",
+  },
+  {
+    slug: "grains",
+    name: "Grains",
+    description: "Cereal grains for milling, feed, and processing export channels.",
+  },
+  {
+    slug: "oilseeds",
+    name: "Oilseeds",
+    description: "Oilseed crops with aligned quality and logistics parameters.",
+  },
+];
+
 export const DUMMY_PRODUCERS: ProducerProfile[] = [
   {
     slug: "ukroliya",
@@ -11,7 +34,7 @@ export const DUMMY_PRODUCERS: ProducerProfile[] = [
     description:
       "Ukroliya focuses on refined and crude sunflower oil, related meals, and structured export documentation for EU and MENA buyers.",
     hq: "Poltava region, Ukraine",
-    categories: ["Oils", "Meals"],
+    categorySlugs: ["oils", "meals"],
   },
   {
     slug: "grainline",
@@ -20,18 +43,19 @@ export const DUMMY_PRODUCERS: ProducerProfile[] = [
     description:
       "Grainline coordinates corn, wheat, and barley offers with consistent quality declarations and loading windows.",
     hq: "Odesa Oblast, Ukraine",
-    categories: ["Grains", "Oilseeds"],
+    categorySlugs: ["grains", "oilseeds"],
   },
 ];
 
-const groups: ProductGroupDetail[] = [
+const products: ProductDetail[] = [
   {
     id: "pg-ukroliya-sunflower-oil",
     slug: "sunflower-oil",
     producerSlug: "ukroliya",
     producerName: "Ukroliya",
+    categorySlug: "oils",
+    categoryName: "Oils",
     name: "Sunflower oil",
-    category: "Oils",
     shortDescription: "Refined and crude sunflower oil for foodservice and retail bottlers.",
     longDescription:
       "Sunflower oil grades aligned to buyer specifications: cold-pressed and refined deodorized options, with clear fatty acid profiles and shelf-life parameters for export.",
@@ -50,8 +74,9 @@ const groups: ProductGroupDetail[] = [
     slug: "corn-oil",
     producerSlug: "ukroliya",
     producerName: "Ukroliya",
+    categorySlug: "oils",
+    categoryName: "Oils",
     name: "Corn oil",
-    category: "Oils",
     shortDescription: "Refined corn oil for food manufacturing and private label.",
     certifications: ["ISO 22000", "Kosher"],
     featuredRank: 40,
@@ -69,8 +94,9 @@ const groups: ProductGroupDetail[] = [
     slug: "sunflower-meal",
     producerSlug: "ukroliya",
     producerName: "Ukroliya",
+    categorySlug: "meals",
+    categoryName: "Meals",
     name: "Sunflower meal",
-    category: "Meals",
     shortDescription: "High-protein meal for compound feed and nutrition formulations.",
     certifications: ["GMP"],
     featuredRank: 60,
@@ -88,8 +114,9 @@ const groups: ProductGroupDetail[] = [
     slug: "corn",
     producerSlug: "grainline",
     producerName: "Grainline Export",
+    categorySlug: "grains",
+    categoryName: "Grains",
     name: "Corn (maize)",
-    category: "Grains",
     shortDescription: "Yellow corn for feed and processing channels with clear grade parameters.",
     certifications: ["GAP"],
     featuredRank: 20,
@@ -107,8 +134,9 @@ const groups: ProductGroupDetail[] = [
     slug: "wheat",
     producerSlug: "grainline",
     producerName: "Grainline Export",
+    categorySlug: "grains",
+    categoryName: "Grains",
     name: "Milling wheat",
-    category: "Grains",
     shortDescription: "Food-grade wheat for millers with test weight and protein bands.",
     certifications: ["GAP", "ISO 9001"],
     featuredRank: 30,
@@ -123,58 +151,81 @@ const groups: ProductGroupDetail[] = [
   },
 ];
 
-export function listProductGroups(): ProductGroupListItem[] {
-  return groups.map(
-    ({
-      id,
-      slug,
-      producerSlug,
-      producerName,
-      name,
-      category,
-      shortDescription,
-      certifications,
-      featuredRank,
-    }) => ({
-      id,
-      slug,
-      producerSlug,
-      producerName,
-      name,
-      category,
-      shortDescription,
-      certifications,
-      featuredRank,
-    }),
-  );
+function toListItem({
+  id,
+  slug,
+  producerSlug,
+  producerName,
+  categorySlug,
+  categoryName,
+  name,
+  shortDescription,
+  certifications,
+  featuredRank,
+}: ProductDetail): ProductListItem {
+  return {
+    id,
+    slug,
+    producerSlug,
+    producerName,
+    categorySlug,
+    categoryName,
+    name,
+    shortDescription,
+    certifications,
+    featuredRank,
+  };
+}
+
+export function listProducts(): ProductListItem[] {
+  return products.map(toListItem);
+}
+
+export function listCategories(): Category[] {
+  return DUMMY_CATEGORIES;
+}
+
+export function getCategoryBySlug(slug: string): Category | undefined {
+  return DUMMY_CATEGORIES.find((c) => c.slug === slug);
+}
+
+export function listProducers(): ProducerProfile[] {
+  return DUMMY_PRODUCERS;
 }
 
 export function getProducerBySlug(slug: string): ProducerProfile | undefined {
   return DUMMY_PRODUCERS.find((p) => p.slug === slug);
 }
 
-export function getProductGroupDetail(
-  producerSlug: string,
-  productSlug: string,
-): ProductGroupDetail | undefined {
-  return groups.find((g) => g.producerSlug === producerSlug && g.slug === productSlug);
+export function getProductBySlug(slug: string): ProductDetail | undefined {
+  return products.find((p) => p.slug === slug);
 }
 
-export function listGroupsByProducer(producerSlug: string): ProductGroupListItem[] {
-  return listProductGroups().filter((g) => g.producerSlug === producerSlug);
+export function getProduct(categorySlug: string, productId: string): ProductDetail | undefined {
+  return products.find((p) => p.categorySlug === categorySlug && p.slug === productId);
 }
 
-export function catalogFacetValues(items: ProductGroupListItem[]) {
-  const categories = new Set<string>();
+export function listProductsByCategory(categorySlug: string): ProductListItem[] {
+  return listProducts().filter((p) => p.categorySlug === categorySlug);
+}
+
+export function listProductsByProducer(producerSlug: string): ProductListItem[] {
+  return listProducts().filter((p) => p.producerSlug === producerSlug);
+}
+
+export function catalogFacetValues(items: ProductListItem[]) {
+  const categories = new Map<string, string>();
   const producers = new Map<string, string>();
   const certifications = new Set<string>();
   for (const it of items) {
-    categories.add(it.category);
+    categories.set(it.categorySlug, it.categoryName);
     producers.set(it.producerSlug, it.producerName);
     it.certifications.forEach((c) => certifications.add(c));
   }
   return {
-    categories: [...categories].sort((a, b) => a.localeCompare(b)),
+    categories: [...categories.entries()]
+      .map(([slug, name]) => ({ slug, name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
     producers: [...producers.entries()]
       .map(([slug, name]) => ({ slug, name }))
       .sort((a, b) => a.name.localeCompare(b.name)),
