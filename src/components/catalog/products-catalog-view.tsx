@@ -3,10 +3,12 @@
 import * as Checkbox from "@radix-ui/react-checkbox";
 import { Check, ChevronDown, Filter, Search, X } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import type { ProductGroupsSort } from "@/lib/catalog/filter-product-groups";
-import { filterProductGroups } from "@/lib/catalog/filter-product-groups";
+import { catalogFacetValues } from "@/data/catalog-dummy";
+import { productHref } from "@/lib/catalog/product-path";
+import type { ProductsSort } from "@/lib/catalog/filter-products";
+import { filterProducts } from "@/lib/catalog/filter-products";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import {
   resetFilters,
@@ -15,13 +17,33 @@ import {
   toggleCategory,
   toggleCertification,
   toggleProducer,
-} from "@/lib/store/slices/product-groups-filters-slice";
-import type { ProductGroupListItem } from "@/types/catalog";
-import { catalogFacetValues } from "@/data/catalog-dummy";
+} from "@/lib/store/slices/products-filters-slice";
+import type { AppDispatch } from "@/lib/store/store";
+import type { ProductListItem } from "@/types/catalog";
 
-type ProductGroupsViewProps = {
-  initialItems: ProductGroupListItem[];
+type BreadcrumbItem = {
+  label: string;
+  href?: string;
 };
+
+type ProductsCatalogViewProps = {
+  initialItems: ProductListItem[];
+  title: string;
+  description: string;
+  breadcrumbs?: BreadcrumbItem[];
+  lockedCategorySlug?: string;
+  lockedProducerSlug?: string;
+};
+
+function applyLockedFilters(
+  dispatch: AppDispatch,
+  lockedCategorySlug?: string,
+  lockedProducerSlug?: string,
+) {
+  dispatch(resetFilters());
+  if (lockedCategorySlug) dispatch(toggleCategory(lockedCategorySlug));
+  if (lockedProducerSlug) dispatch(toggleProducer(lockedProducerSlug));
+}
 
 function FacetCheckboxRow({
   id,
@@ -29,23 +51,28 @@ function FacetCheckboxRow({
   checked,
   onCheckedChange,
   count,
+  disabled,
 }: {
   id: string;
   label: string;
   checked: boolean;
   onCheckedChange: (next: boolean) => void;
   count?: number;
+  disabled?: boolean;
 }) {
   return (
     <label
       htmlFor={id}
-      className="flex cursor-pointer items-start gap-3 rounded-lg border border-transparent px-2 py-2 text-sm text-slate-700 hover:border-slate-200 hover:bg-slate-50"
+      className={`flex items-start gap-3 rounded-lg border border-transparent px-2 py-2 text-sm text-slate-700 ${
+        disabled ? "cursor-default opacity-70" : "cursor-pointer hover:border-slate-200 hover:bg-slate-50"
+      }`}
     >
       <Checkbox.Root
         id={id}
         checked={checked}
+        disabled={disabled}
         onCheckedChange={(v) => onCheckedChange(v === true)}
-        className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-slate-300 bg-white data-[state=checked]:border-brand data-[state=checked]:bg-brand"
+        className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-slate-300 bg-white data-[state=checked]:border-brand data-[state=checked]:bg-brand disabled:opacity-60"
       >
         <Checkbox.Indicator>
           <Check className="h-3 w-3 text-white" strokeWidth={3} />
@@ -58,12 +85,12 @@ function FacetCheckboxRow({
 }
 
 /** Counts from the full catalog (not narrowed by other facets), so counts stay stable while filtering. */
-function facetCounts(items: ProductGroupListItem[]) {
+function facetCounts(items: ProductListItem[]) {
   const byCategory = new Map<string, number>();
   const byProducer = new Map<string, number>();
   const byCert = new Map<string, number>();
   for (const it of items) {
-    byCategory.set(it.category, (byCategory.get(it.category) ?? 0) + 1);
+    byCategory.set(it.categorySlug, (byCategory.get(it.categorySlug) ?? 0) + 1);
     byProducer.set(it.producerSlug, (byProducer.get(it.producerSlug) ?? 0) + 1);
     for (const c of it.certifications) {
       byCert.set(c, (byCert.get(c) ?? 0) + 1);
@@ -72,20 +99,31 @@ function facetCounts(items: ProductGroupListItem[]) {
   return { byCategory, byProducer, byCert };
 }
 
-export function ProductGroupsView({ initialItems }: ProductGroupsViewProps) {
+export function ProductsCatalogView({
+  initialItems,
+  title,
+  description,
+  breadcrumbs = [{ label: "Products" }],
+  lockedCategorySlug,
+  lockedProducerSlug,
+}: ProductsCatalogViewProps) {
   const dispatch = useAppDispatch();
-  const filters = useAppSelector((s) => s.productGroupsFilters);
+  const filters = useAppSelector((s) => s.productsFilters);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    applyLockedFilters(dispatch, lockedCategorySlug, lockedProducerSlug);
+  }, [dispatch, lockedCategorySlug, lockedProducerSlug]);
 
   const facets = useMemo(() => catalogFacetValues(initialItems), [initialItems]);
   const counts = useMemo(() => facetCounts(initialItems), [initialItems]);
 
   const filtered = useMemo(
     () =>
-      filterProductGroups(initialItems, {
+      filterProducts(initialItems, {
         search: filters.search,
-        categories: filters.categories,
-        producers: filters.producers,
+        categorySlugs: filters.categorySlugs,
+        producerSlugs: filters.producerSlugs,
         certifications: filters.certifications,
         sort: filters.sort,
       }),
@@ -93,10 +131,12 @@ export function ProductGroupsView({ initialItems }: ProductGroupsViewProps) {
   );
 
   const activeFilterCount =
-    filters.categories.length +
-    filters.producers.length +
+    (lockedCategorySlug ? 0 : filters.categorySlugs.length) +
+    (lockedProducerSlug ? 0 : filters.producerSlugs.length) +
     filters.certifications.length +
     (filters.search.trim() ? 1 : 0);
+
+  const clearFilters = () => applyLockedFilters(dispatch, lockedCategorySlug, lockedProducerSlug);
 
   return (
     <div className="border-b border-slate-200/80 bg-[var(--page-bg)]">
@@ -108,22 +148,29 @@ export function ProductGroupsView({ initialItems }: ProductGroupsViewProps) {
                 Home
               </Link>
             </li>
-            <li aria-hidden>/</li>
-            <li className="font-medium text-slate-700">Product groups</li>
+            {breadcrumbs.map((crumb, i) => (
+              <li key={`${crumb.label}-${i}`} className="flex items-center gap-1.5">
+                <span aria-hidden>/</span>
+                {crumb.href ? (
+                  <Link href={crumb.href} className="hover:text-brand">
+                    {crumb.label}
+                  </Link>
+                ) : (
+                  <span className="font-medium text-slate-700">{crumb.label}</span>
+                )}
+              </li>
+            ))}
           </ol>
         </nav>
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Product groups for buyers</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
-              Explore export-oriented product lines from verified producers. Use filters to narrow categories, producers,
-              and certifications—data is local dummy content until wired to your database.
-            </p>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{title}</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">{description}</p>
           </div>
           <p className="text-sm text-slate-500">
             <span className="font-semibold tabular-nums text-slate-800">{filtered.length}</span> of{" "}
-            <span className="tabular-nums">{initialItems.length}</span> groups match
+            <span className="tabular-nums">{initialItems.length}</span> products match
           </p>
         </div>
 
@@ -159,7 +206,7 @@ export function ProductGroupsView({ initialItems }: ProductGroupsViewProps) {
                 <p className="text-sm font-semibold text-slate-900">Refine results</p>
                 <button
                   type="button"
-                  onClick={() => dispatch(resetFilters())}
+                  onClick={clearFilters}
                   className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
                 >
                   <X className="h-3.5 w-3.5" aria-hidden />
@@ -190,7 +237,7 @@ export function ProductGroupsView({ initialItems }: ProductGroupsViewProps) {
                 <select
                   id="pg-sort"
                   value={filters.sort}
-                  onChange={(e) => dispatch(setSort(e.target.value as ProductGroupsSort))}
+                  onChange={(e) => dispatch(setSort(e.target.value as ProductsSort))}
                   className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 shadow-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/30"
                 >
                   <option value="featured">Featured</option>
@@ -203,18 +250,19 @@ export function ProductGroupsView({ initialItems }: ProductGroupsViewProps) {
               <div className="mt-6 border-t border-slate-100 pt-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Category</p>
                 <div className="mt-2 space-y-1">
-                  {facets.categories.map((c) => {
-                    const has = filters.categories.includes(c);
+                  {facets.categories.map(({ slug, name }) => {
+                    const has = filters.categorySlugs.includes(slug);
                     return (
                       <FacetCheckboxRow
-                        key={c}
-                        id={`cat-${c}`}
-                        label={c}
+                        key={slug}
+                        id={`cat-${slug}`}
+                        label={name}
                         checked={has}
+                        disabled={!!lockedCategorySlug}
                         onCheckedChange={(on) => {
-                          if (on !== has) dispatch(toggleCategory(c));
+                          if (on !== has) dispatch(toggleCategory(slug));
                         }}
-                        count={counts.byCategory.get(c)}
+                        count={counts.byCategory.get(slug)}
                       />
                     );
                   })}
@@ -225,13 +273,14 @@ export function ProductGroupsView({ initialItems }: ProductGroupsViewProps) {
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Producer</p>
                 <div className="mt-2 space-y-1">
                   {facets.producers.map(({ slug, name }) => {
-                    const has = filters.producers.includes(slug);
+                    const has = filters.producerSlugs.includes(slug);
                     return (
                       <FacetCheckboxRow
                         key={slug}
                         id={`prod-${slug}`}
                         label={name}
                         checked={has}
+                        disabled={!!lockedProducerSlug}
                         onCheckedChange={(on) => {
                           if (on !== has) dispatch(toggleProducer(slug));
                         }}
@@ -268,14 +317,14 @@ export function ProductGroupsView({ initialItems }: ProductGroupsViewProps) {
             </div>
           </aside>
 
-          <section aria-label="Product groups">
+          <section aria-label="Products">
             {filtered.length === 0 ? (
               <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
-                <p className="text-base font-semibold text-slate-900">No groups match these filters</p>
+                <p className="text-base font-semibold text-slate-900">No products match these filters</p>
                 <p className="mt-2 text-sm text-slate-600">Try clearing certifications or widening your search.</p>
                 <button
                   type="button"
-                  onClick={() => dispatch(resetFilters())}
+                  onClick={clearFilters}
                   className="mt-6 inline-flex rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-dark"
                 >
                   Reset filters
@@ -288,7 +337,12 @@ export function ProductGroupsView({ initialItems }: ProductGroupsViewProps) {
                     <article className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand/30 hover:shadow-md">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-brand">{it.category}</p>
+                          <Link
+                            href={`/categories/${it.categorySlug}`}
+                            className="text-xs font-semibold uppercase tracking-wide text-brand hover:underline"
+                          >
+                            {it.categoryName}
+                          </Link>
                           <h2 className="mt-1 text-lg font-semibold text-slate-900">{it.name}</h2>
                           <p className="mt-1 text-sm text-slate-500">{it.producerName}</p>
                         </div>
@@ -306,16 +360,16 @@ export function ProductGroupsView({ initialItems }: ProductGroupsViewProps) {
                       </div>
                       <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
                         <Link
-                          href={`/product-group/${it.producerSlug}`}
+                          href={`/producers/${it.producerSlug}`}
                           className="text-sm font-semibold text-slate-700 hover:text-brand"
                         >
                           Producer profile
                         </Link>
                         <Link
-                          href={`/product-group/${it.producerSlug}/${it.slug}`}
+                          href={productHref(it)}
                           className="inline-flex items-center gap-1 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-dark"
                         >
-                          View group
+                          View product
                         </Link>
                       </div>
                     </article>

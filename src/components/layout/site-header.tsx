@@ -19,8 +19,11 @@ export function SiteHeader() {
           className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex"
           aria-label="Primary"
         >
-          <Link href="/product-groups" className={navLinkClass}>
-            Product groups
+          <Link href="/products" className={navLinkClass}>
+            Products
+          </Link>
+          <Link href="/producers" className={navLinkClass}>
+            Producers
           </Link>
           <Link href="/#how" className={navLinkClass}>
             How it works

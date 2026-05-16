@@ -1,11 +1,18 @@
-export type ProductGroupListItem = {
+export type Category = {
+  slug: string;
+  name: string;
+  description: string;
+};
+
+export type ProductListItem = {
   id: string;
-  /** URL segment under /product-group/[producerSlug]/ */
+  /** Product id — URL segment under /products/[categorySlug]/[slug] (unique per category). */
   slug: string;
   producerSlug: string;
   producerName: string;
+  categorySlug: string;
+  categoryName: string;
   name: string;
-  category: string;
   shortDescription: string;
   certifications: string[];
   /** Lower = more prominent when sort is "featured". */
@@ -18,10 +25,10 @@ export type ProducerProfile = {
   tagline: string;
   description: string;
   hq: string;
-  categories: string[];
+  categorySlugs: string[];
 };
 
-export type ProductGroupDetail = ProductGroupListItem & {
+export type ProductDetail = ProductListItem & {
   longDescription: string;
   packaging: string[];
   specs: { label: string; value: string }[];
