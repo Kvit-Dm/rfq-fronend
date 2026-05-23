@@ -12,8 +12,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Direct Access to Verified Ukrainian Producers",
+    default: "AGROEXPORT",
     template: "%s | AGROEXPORT UA",
+  },
+  icons: {
+    icon: "/favicon.ico"
   },
   description:
     "Connect directly with verified Ukrainian producers. Structured RFQ workflow, transparent communication, no intermediaries and no prepayments.",
@@ -24,6 +27,7 @@ export const metadata: Metadata = {
     "Ukrainian manufacturers",
     "agroexport",
   ],
+
 };
 
 export const viewport: Viewport = {
