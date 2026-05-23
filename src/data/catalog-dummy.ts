@@ -27,7 +27,7 @@ export const DUMMY_CATEGORIES: Category[] = [
 ];
 
 export const DUMMY_PRODUCERS: ProducerProfile[] = [
-  {
+  { 
     slug: "ukroliya",
     name: "Ukroliya",
     tagline: "Oils, meals, and export-ready agro supply",
@@ -45,9 +45,38 @@ export const DUMMY_PRODUCERS: ProducerProfile[] = [
     hq: "Odesa Oblast, Ukraine",
     categorySlugs: ["grains", "oilseeds"],
   },
+  {
+    slug: "nibulon",
+    name: "Nibulon",
+    tagline: "some text   ",
+    description: "Agricultural company specializing in production and export of grains such as wheat, barley and corn",
+    hq: "Kyiv, Ukraine",
+    categorySlugs: ["grains", "oilseeds","wheat", "barley"],
+  },
 ];
 
 const products: ProductDetail[] = [
+  {
+    id: "pg-ukroliya-oilseeds",
+    slug: "oilseeds",
+    producerSlug: "nibulon",
+    producerName: "Nibulon",
+    categorySlug: "oilseeds",
+    categoryName: "Oilseeds",
+    name: "oilseeds ",
+    shortDescription: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    longDescription:
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    certifications: ["ISO 22000", "HALAL", "GMP"],
+    featuredRank: 10,
+    packaging: ["Flexitank", "PET 1L–5L", "Bulk road tanker", "ISO tank"],
+    specs: [
+      { label: "Acid value (max)", value: "0.6 mg KOH/g (refined, indicative)" },
+      { label: "Peroxide (at dispatch)", value: "≤ 10.0 meq/kg (indicative)" },
+      { label: "Moisture & impurities", value: "≤ 0.10% (indicative)" },
+    ],
+    incoterms: ["FOB", "CIF", "DAP"],
+  },
   {
     id: "pg-ukroliya-sunflower-oil",
     slug: "sunflower-oil",

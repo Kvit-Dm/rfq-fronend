@@ -16,7 +16,7 @@ export function SiteHeader() {
           </span>
         </Link>
         <nav
-          className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex"
+          className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex justify-start"
           aria-label="Primary"
         >
           <Link href="/products" className={navLinkClass}>
@@ -24,18 +24,6 @@ export function SiteHeader() {
           </Link>
           <Link href="/producers" className={navLinkClass}>
             Producers
-          </Link>
-          <Link href="/#how" className={navLinkClass}>
-            How it works
-          </Link>
-          <Link href="/#buyers" className={navLinkClass}>
-            For buyers
-          </Link>
-          <Link href="/#producers" className={navLinkClass}>
-            For producers
-          </Link>
-          <Link href="/#contact" className={navLinkClass}>
-            Contact
           </Link>
         </nav>
         <div className="flex items-center gap-3">
