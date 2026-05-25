@@ -23,9 +23,9 @@ function loadEnvLocal() {
   }
 }
 
-function countNodes(
-  nodes: { children: { children: unknown[] }[] }[],
-): number {
+import type { CategoryTreeNode } from "../src/types/category-tree";
+
+function countNodes(nodes: CategoryTreeNode[]): number {
   return nodes.reduce((sum, n) => sum + 1 + countNodes(n.children), 0);
 }
 

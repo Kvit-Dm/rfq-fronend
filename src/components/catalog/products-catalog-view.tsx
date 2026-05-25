@@ -5,21 +5,27 @@ import { Check, ChevronDown, Filter, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { catalogFacetValues } from "@/data/catalog-dummy";
-import { productHref } from "@/lib/catalog/product-path";
+import { CategoryFilterDropdowns } from "@/components/catalog/category-filter-dropdowns";
+import { collectCategoryFilterSlugs } from "@/lib/catalog/category-tree-utils";
 import type { ProductsSort } from "@/lib/catalog/filter-products";
 import { filterProducts } from "@/lib/catalog/filter-products";
+import { productHref } from "@/lib/catalog/product-path";
+import { buildProductsPageHref } from "@/lib/catalog/products-url";
+import { productFacetValues } from "@/lib/catalog/product-facets";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import {
   resetFilters,
+  setCategorySlugs,
   setSearch,
   setSort,
-  toggleCategory,
   toggleCertification,
   toggleProducer,
 } from "@/lib/store/slices/products-filters-slice";
 import type { AppDispatch } from "@/lib/store/store";
+import type { CategoryTreeNode } from "@/types/category-tree";
 import type { ProductListItem } from "@/types/catalog";
+
+const PRODUCTS_PAGE_SIZE = 12;
 
 type BreadcrumbItem = {
   label: string;
@@ -27,21 +33,28 @@ type BreadcrumbItem = {
 };
 
 type ProductsCatalogViewProps = {
-  initialItems: ProductListItem[];
+  items: ProductListItem[];
+  categoryTree: CategoryTreeNode[];
   title: string;
   description: string;
   breadcrumbs?: BreadcrumbItem[];
   lockedCategorySlug?: string;
   lockedProducerSlug?: string;
+  isLoading?: boolean;
 };
 
 function applyLockedFilters(
   dispatch: AppDispatch,
+  categoryTree: CategoryTreeNode[],
   lockedCategorySlug?: string,
   lockedProducerSlug?: string,
 ) {
   dispatch(resetFilters());
-  if (lockedCategorySlug) dispatch(toggleCategory(lockedCategorySlug));
+  if (lockedCategorySlug) {
+    dispatch(
+      setCategorySlugs(collectCategoryFilterSlugs(categoryTree, lockedCategorySlug)),
+    );
+  }
   if (lockedProducerSlug) dispatch(toggleProducer(lockedProducerSlug));
 }
 
@@ -100,43 +113,79 @@ function facetCounts(items: ProductListItem[]) {
 }
 
 export function ProductsCatalogView({
-  initialItems,
+  items,
+  categoryTree,
   title,
   description,
   breadcrumbs = [{ label: "Products" }],
   lockedCategorySlug,
   lockedProducerSlug,
+  isLoading = false,
 }: ProductsCatalogViewProps) {
   const dispatch = useAppDispatch();
   const filters = useAppSelector((s) => s.productsFilters);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [pagination, setPagination] = useState({ filterKey: "", page: 1 });
 
   useEffect(() => {
-    applyLockedFilters(dispatch, lockedCategorySlug, lockedProducerSlug);
-  }, [dispatch, lockedCategorySlug, lockedProducerSlug]);
+    if (categoryTree.length === 0) return;
+    applyLockedFilters(dispatch, categoryTree, lockedCategorySlug, lockedProducerSlug);
+  }, [dispatch, categoryTree, lockedCategorySlug, lockedProducerSlug]);
 
-  const facets = useMemo(() => catalogFacetValues(initialItems), [initialItems]);
-  const counts = useMemo(() => facetCounts(initialItems), [initialItems]);
+  const facets = useMemo(() => productFacetValues(items), [items]);
+  const counts = useMemo(() => facetCounts(items), [items]);
 
   const filtered = useMemo(
     () =>
-      filterProducts(initialItems, {
+      filterProducts(items, {
         search: filters.search,
         categorySlugs: filters.categorySlugs,
         producerSlugs: filters.producerSlugs,
         certifications: filters.certifications,
         sort: filters.sort,
       }),
-    [initialItems, filters],
+    [items, filters],
   );
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PRODUCTS_PAGE_SIZE));
+
+  const filterKey = useMemo(
+    () =>
+      [
+        filters.search,
+        filters.categorySlugs.join(","),
+        filters.producerSlugs.join(","),
+        filters.certifications.join(","),
+        filters.sort,
+      ].join("|"),
+    [filters],
+  );
+
+  const page =
+    pagination.filterKey === filterKey
+      ? Math.min(pagination.page, totalPages)
+      : 1;
+
+  const setPage = (next: number) => {
+    setPagination({
+      filterKey,
+      page: Math.max(1, Math.min(next, totalPages)),
+    });
+  };
+
+  const pageItems = useMemo(() => {
+    const start = (page - 1) * PRODUCTS_PAGE_SIZE;
+    return filtered.slice(start, start + PRODUCTS_PAGE_SIZE);
+  }, [filtered, page]);
+
   const activeFilterCount =
-    (lockedCategorySlug ? 0 : filters.categorySlugs.length) +
+    (lockedCategorySlug ? 0 : filters.categorySlugs.length > 0 ? 1 : 0) +
     (lockedProducerSlug ? 0 : filters.producerSlugs.length) +
     filters.certifications.length +
     (filters.search.trim() ? 1 : 0);
 
-  const clearFilters = () => applyLockedFilters(dispatch, lockedCategorySlug, lockedProducerSlug);
+  const clearFilters = () =>
+    applyLockedFilters(dispatch, categoryTree, lockedCategorySlug, lockedProducerSlug);
 
   return (
     <div className="border-b border-slate-200/80 bg-[var(--page-bg)]">
@@ -170,7 +219,8 @@ export function ProductsCatalogView({
           </div>
           <p className="text-sm text-slate-500">
             <span className="font-semibold tabular-nums text-slate-800">{filtered.length}</span> of{" "}
-            <span className="tabular-nums">{initialItems.length}</span> products match
+            <span className="tabular-nums">{items.length}</span> products match
+            {isLoading ? " · loading…" : null}
           </p>
         </div>
 
@@ -248,25 +298,10 @@ export function ProductsCatalogView({
               </div>
 
               <div className="mt-6 border-t border-slate-100 pt-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Category</p>
-                <div className="mt-2 space-y-1">
-                  {facets.categories.map(({ slug, name }) => {
-                    const has = filters.categorySlugs.includes(slug);
-                    return (
-                      <FacetCheckboxRow
-                        key={slug}
-                        id={`cat-${slug}`}
-                        label={name}
-                        checked={has}
-                        disabled={!!lockedCategorySlug}
-                        onCheckedChange={(on) => {
-                          if (on !== has) dispatch(toggleCategory(slug));
-                        }}
-                        count={counts.byCategory.get(slug)}
-                      />
-                    );
-                  })}
-                </div>
+                <CategoryFilterDropdowns
+                  categoryTree={categoryTree}
+                  disabled={!!lockedCategorySlug || categoryTree.length === 0}
+                />
               </div>
 
               <div className="mt-6 border-t border-slate-100 pt-5">
@@ -318,7 +353,11 @@ export function ProductsCatalogView({
           </aside>
 
           <section aria-label="Products">
-            {filtered.length === 0 ? (
+            {isLoading ? (
+              <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-600 shadow-sm">
+                Loading products from catalog…
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
                 <p className="text-base font-semibold text-slate-900">No products match these filters</p>
                 <p className="mt-2 text-sm text-slate-600">Try clearing certifications or widening your search.</p>
@@ -331,14 +370,15 @@ export function ProductsCatalogView({
                 </button>
               </div>
             ) : (
+              <>
               <ul className="grid gap-5 sm:grid-cols-2">
-                {filtered.map((it) => (
+                {pageItems.map((it) => (
                   <li key={it.id}>
                     <article className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand/30 hover:shadow-md">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <Link
-                            href={`/categories/${it.categorySlug}`}
+                            href={buildProductsPageHref(it.categorySlug)}
                             className="text-xs font-semibold uppercase tracking-wide text-brand hover:underline"
                           >
                             {it.categoryName}
@@ -376,6 +416,42 @@ export function ProductsCatalogView({
                   </li>
                 ))}
               </ul>
+
+              {totalPages > 1 ? (
+                <nav
+                  className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                  aria-label="Products pagination"
+                >
+                  <p className="text-sm text-slate-600">
+                    Page <span className="font-semibold text-slate-900">{page}</span> of{" "}
+                    <span className="font-semibold text-slate-900">{totalPages}</span>
+                    <span className="text-slate-400">
+                      {" "}
+                      · showing {(page - 1) * PRODUCTS_PAGE_SIZE + 1}–
+                      {Math.min(page * PRODUCTS_PAGE_SIZE, filtered.length)} of {filtered.length}
+                    </span>
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={page <= 1}
+                      onClick={() => setPage(page - 1)}
+                      className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      disabled={page >= totalPages}
+                      onClick={() => setPage(page + 1)}
+                      className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </nav>
+              ) : null}
+              </>
             )}
           </section>
         </div>

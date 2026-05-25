@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { ProductsCatalogView } from "@/components/catalog/products-catalog-view";
-import { getProducerBySlug, listProducts } from "@/data/catalog-dummy";
+import { CatalogLockedPageContent } from "@/components/catalog/catalog-locked-page-content";
+import { fetchProducerBySlug } from "@/lib/catalog/fetch-producers";
 
 type PageProps = {
   params: Promise<{ producerSlug: string }>;
@@ -10,7 +10,7 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { producerSlug } = await params;
-  const producer = getProducerBySlug(producerSlug);
+  const producer = await fetchProducerBySlug(producerSlug);
   if (!producer) {
     return { title: "Producer products" };
   }
@@ -22,12 +22,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ProducerProductsPage({ params }: PageProps) {
   const { producerSlug } = await params;
-  const producer = getProducerBySlug(producerSlug);
+  const producer = await fetchProducerBySlug(producerSlug);
   if (!producer) notFound();
 
   return (
-    <ProductsCatalogView
-      initialItems={listProducts()}
+    <CatalogLockedPageContent
       title={`${producer.name} products`}
       description={`Product lines from ${producer.name}. Filter by category and certifications within this producer's catalog.`}
       breadcrumbs={[

@@ -2,8 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { DUMMY_CATEGORIES, getProducerBySlug, listProductsByProducer } from "@/data/catalog-dummy";
+import { fetchAllProducts } from "@/lib/catalog/fetch-products";
+import { fetchProducerBySlug } from "@/lib/catalog/fetch-producers";
+import { fetchCategoryTree } from "@/lib/catalog/fetch-category-tree";
+import { findCategoryBySlug } from "@/lib/catalog/category-tree-utils";
 import { productHref } from "@/lib/catalog/product-path";
+import { buildProductsPageHref } from "@/lib/catalog/products-url";
+
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ producerSlug: string }>;
@@ -11,7 +17,7 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { producerSlug } = await params;
-  const producer = getProducerBySlug(producerSlug);
+  const producer = await fetchProducerBySlug(producerSlug);
   if (!producer) {
     return { title: "Producer" };
   }
@@ -23,12 +29,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ProducerPage({ params }: PageProps) {
   const { producerSlug } = await params;
-  const producer = getProducerBySlug(producerSlug);
+  const [producer, products, categoryTree] = await Promise.all([
+    fetchProducerBySlug(producerSlug),
+    fetchAllProducts(),
+    fetchCategoryTree(),
+  ]);
+
   if (!producer) notFound();
 
-  const products = listProductsByProducer(producerSlug);
+  const producerProducts = products.filter((p) => p.producerSlug === producerSlug);
   const categoryNames = producer.categorySlugs
-    .map((slug) => DUMMY_CATEGORIES.find((c) => c.slug === slug)?.name)
+    .map((slug) => findCategoryBySlug(categoryTree, slug)?.name)
     .filter(Boolean)
     .join(" · ");
 
@@ -65,7 +76,7 @@ export default async function ProducerPage({ params }: PageProps) {
             </div>
             <div className="rounded-lg bg-slate-50 p-4">
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Focus categories</dt>
-              <dd className="mt-1 font-medium text-slate-900">{categoryNames}</dd>
+              <dd className="mt-1 font-medium text-slate-900">{categoryNames || "—"}</dd>
             </div>
           </dl>
           <Link
@@ -78,36 +89,36 @@ export default async function ProducerPage({ params }: PageProps) {
 
         <section className="mt-10" aria-labelledby="lines-heading">
           <div className="flex items-end justify-between gap-4">
-                  <h2 id="lines-heading" className="text-xl font-bold text-slate-900 sm:text-2xl">
-                    Product lines
-                  </h2>
-                  <Link href="/products" className="text-sm font-semibold text-brand hover:underline">
-                    Browse all products
+            <h2 id="lines-heading" className="text-xl font-bold text-slate-900 sm:text-2xl">
+              Product lines
+            </h2>
+            <Link href="/products" className="text-sm font-semibold text-brand hover:underline">
+              Browse all products
+            </Link>
+          </div>
+          <ul className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {producerProducts.map((g) => (
+              <li key={g.id}>
+                <article className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand/30 hover:shadow-md">
+                  <Link
+                    href={buildProductsPageHref(g.categorySlug)}
+                    className="text-xs font-semibold uppercase tracking-wide text-brand hover:underline"
+                  >
+                    {g.categoryName}
                   </Link>
-                </div>
-                <ul className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {products.map((g) => (
-                    <li key={g.id}>
-                      <article className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand/30 hover:shadow-md">
-                        <Link
-                          href={`/categories/${g.categorySlug}`}
-                          className="text-xs font-semibold uppercase tracking-wide text-brand hover:underline"
-                        >
-                          {g.categoryName}
-                        </Link>
-                        <h3 className="mt-1 text-lg font-semibold text-slate-900">{g.name}</h3>
-                        <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{g.shortDescription}</p>
-                        <div className="mt-5 border-t border-slate-100 pt-4">
-                          <Link
-                            href={productHref(g)}
-                            className="inline-flex w-full items-center justify-center rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-dark"
-                          >
-                            View product
-                          </Link>
-                        </div>
-                      </article>
-                    </li>
-                  ))}
+                  <h3 className="mt-1 text-lg font-semibold text-slate-900">{g.name}</h3>
+                  <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{g.shortDescription}</p>
+                  <div className="mt-5 border-t border-slate-100 pt-4">
+                    <Link
+                      href={productHref(g)}
+                      className="inline-flex w-full items-center justify-center rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-dark"
+                    >
+                      View product
+                    </Link>
+                  </div>
+                </article>
+              </li>
+            ))}
           </ul>
         </section>
       </div>

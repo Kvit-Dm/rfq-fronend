@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { listProducers } from "@/data/catalog-dummy";
+import { fetchAllProducers } from "@/lib/catalog/fetch-producers";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Verified producers",
   description: "Browse verified Ukrainian export producers and their product catalogs.",
 };
 
-export default function ProducersPage() {
-  const producers = listProducers();
+export default async function ProducersPage() {
+  const producers = await fetchAllProducers();
 
   return (
     <div className="border-b border-slate-200/80 bg-[var(--page-bg)]">
