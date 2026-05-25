@@ -46,6 +46,9 @@ export const productsFiltersSlice = createSlice({
     setSort(state, action: PayloadAction<ProductsSort>) {
       state.sort = action.payload;
     },
+    setCategorySlugs(state, action: PayloadAction<string[]>) {
+      state.categorySlugs = action.payload;
+    },
     resetFilters() {
       return initialState;
     },
@@ -55,6 +58,7 @@ export const productsFiltersSlice = createSlice({
 export const {
   setSearch,
   toggleCategory,
+  setCategorySlugs,
   toggleProducer,
   toggleCertification,
   setSort,

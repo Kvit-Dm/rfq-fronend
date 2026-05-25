@@ -19,6 +19,9 @@ export function SiteHeader() {
           className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex justify-start"
           aria-label="Primary"
         >
+          <Link href="/categories" className={navLinkClass}>
+            Categories
+          </Link>
           <Link href="/products" className={navLinkClass}>
             Products
           </Link>

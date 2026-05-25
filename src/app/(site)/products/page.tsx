@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
-import { ProductsCatalogView } from "@/components/catalog/products-catalog-view";
-import { listProducts } from "@/data/catalog-dummy";
+import { ProductsPageContent } from "@/components/catalog/products-page-content";
 
 export const metadata: Metadata = {
   title: "Products for buyers",
@@ -9,13 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function ProductsPage() {
-  const items = listProducts();
-  return (
-    <ProductsCatalogView
-      initialItems={items}
-      title="All products"
-      description="Explore export-oriented product lines from verified producers. Use filters to narrow categories, producers, and certifications."
-      breadcrumbs={[{ label: "Products" }]}
-    />
-  );
+  return <ProductsPageContent />;
 }
