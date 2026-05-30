@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { fetchAllProducers } from "@/lib/catalog/fetch-producers";
+import type { ProducerProfile } from "@/types/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,15 @@ export const metadata: Metadata = {
 };
 
 export default async function ProducersPage() {
-  const producers = await fetchAllProducers();
+  let producers: ProducerProfile[] = [];
+  let loadError = false;
+
+//TODO check catch error logic
+  try {
+    producers = await fetchAllProducers();
+  } catch {
+    loadError = true;
+  }
 
   return (
     <div className="border-b border-slate-200/80 bg-[var(--page-bg)]">
@@ -35,6 +44,11 @@ export default async function ProducersPage() {
           </p>
         </header>
 
+        {loadError ? (
+          <p className="mt-10 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Could not load producers. The catalog service may be unavailable — please try again later.
+          </p>
+        ) : (
         <ul className="mt-10 grid gap-5 sm:grid-cols-2">
           {producers.map((p) => (
             <li key={p.slug}>
@@ -62,6 +76,7 @@ export default async function ProducersPage() {
             </li>
           ))}
         </ul>
+        )}
       </div>
     </div>
   );
